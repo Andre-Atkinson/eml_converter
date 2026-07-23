@@ -105,7 +105,7 @@ OpenMcdf) is restored per-project into `~/.nuget`; nothing is installed
 system-wide.
 
 ```bash
-brew install --cask dotnet-sdk
+brew install dotnet
 ```
 
 Then clone, build and install the Quick Action:
