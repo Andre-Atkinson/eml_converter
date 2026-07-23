@@ -98,18 +98,44 @@ characters above U+7FFF — which includes every surrogate, and therefore all
 emoji and other astral characters — are written as their negative equivalent.
 Getting that wrong garbles them in Outlook.
 
-## Building
+## Setting up on a Mac
 
-Requires the .NET SDK (installed via Homebrew here). The published binary is
-self-contained, so it runs even with no `dotnet` on `PATH` — which matters,
-because Automator runs Quick Actions with a near-empty environment.
+The only prerequisite is the .NET SDK. Everything else (MsgKit, MimeKit,
+OpenMcdf) is restored per-project into `~/.nuget`; nothing is installed
+system-wide.
 
 ```bash
-dotnet publish src/Eml2Msg -c Release -o bin -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+brew install --cask dotnet-sdk
 ```
 
-The Quick Action calls `bin/eml2msg` by absolute path, so republishing in place
-picks up automatically.
+Then clone, build and install the Quick Action:
+
+```bash
+git clone https://github.com/Andre-Atkinson/eml_converter.git
+cd eml_converter
+dotnet publish src/Eml2Msg -c Release -o bin -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+python3 tools/install_quickaction.py --from "Your Name <you@example.com>"
+```
+
+On an **Intel** Mac use `-r osx-x64` instead of `osx-arm64`.
+
+Notes:
+
+- The build is **self-contained** (~79 MB) on purpose. Automator runs Quick
+  Actions with a near-empty environment and will not find a Homebrew .NET, so a
+  framework-dependent binary fails there with "You must install .NET".
+- `bin/` is gitignored — the binary is always built locally, never committed.
+- The Quick Action stores the binary's absolute path, so republishing in place
+  is picked up automatically. Move the repo and re-run the installer.
+- `--from` is baked into the installed Quick Action. Re-run the installer to
+  change it, or edit `COMMAND_STRING` in
+  `~/Library/Services/Convert to MSG.workflow/Contents/document.wflow`.
+
+To remove it:
+
+```bash
+python3 tools/install_quickaction.py --uninstall
+```
 
 ## Verifying
 
