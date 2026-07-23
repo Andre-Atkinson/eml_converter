@@ -27,8 +27,28 @@ SCRIPT_TEMPLATE = r'''# Convert selected .eml files to .msg, alongside the origi
 BIN="{binary}"
 FROM="{sender}"
 
+# Message text is passed to osascript as an *argument*, never interpolated into
+# the script source. Converter output contains filenames, and a filename may
+# legally contain quotes and backslashes; splicing those into AppleScript source
+# lets them break out of the string and be parsed as code.
+notify() {{
+  osascript - "$1" >/dev/null 2>&1 <<'APPLESCRIPT'
+on run argv
+  display notification (item 1 of argv) with title "Convert to MSG"
+end run
+APPLESCRIPT
+}}
+
+alert() {{
+  osascript - "$1" >/dev/null 2>&1 <<'APPLESCRIPT'
+on run argv
+  display alert "Convert to MSG" message (item 1 of argv)
+end run
+APPLESCRIPT
+}}
+
 if [ ! -x "$BIN" ]; then
-  osascript -e 'display alert "Convert to MSG" message "Converter not found. Build it first - see the README."'
+  alert "Converter not found. Build it first - see the README."
   exit 1
 fi
 
@@ -41,7 +61,7 @@ for f in "$@"; do
 done
 
 if [ ${{#FILES[@]}} -eq 0 ]; then
-  osascript -e 'display alert "Convert to MSG" message "No .eml files were selected."'
+  alert "No .eml files were selected."
   exit 0
 fi
 
@@ -51,13 +71,14 @@ else
   OUTPUT=$("$BIN" "${{FILES[@]}}" 2>&1)
 fi
 STATUS=$?
-SUMMARY=$(echo "$OUTPUT" | tail -1)
 
 if [ $STATUS -eq 0 ]; then
-  osascript -e "display notification \"$SUMMARY\" with title \"Convert to MSG\""
+  # stdout and stderr are merged above, so the last line is not reliably the
+  # summary - grep for it rather than trusting tail.
+  SUMMARY=$(echo "$OUTPUT" | grep -E '^[0-9]+ converted' | tail -1)
+  notify "${{SUMMARY:-Finished.}}"
 else
-  DETAIL=$(echo "$OUTPUT" | sed 's/"/\\"/g' | tail -20)
-  osascript -e "display alert \"Convert to MSG - problem\" message \"$DETAIL\""
+  alert "$(echo "$OUTPUT" | tail -20)"
 fi
 '''
 

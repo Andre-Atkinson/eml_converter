@@ -3,4 +3,7 @@ obj/
 src/**/bin/
 src/**/obj/
 
+# Never commit mail. These are other people's messages: real addresses,
+# Exchange server names and attachment payloads.
+*.eml
 *.msg

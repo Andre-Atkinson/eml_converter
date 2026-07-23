@@ -156,6 +156,17 @@ print the decompressed RTF and confirm the HTML round-trips out intact:
 python3 tools/inspect_msg.py somefile.msg --rtf
 ```
 
+## Notes on handling mail
+
+`.eml` and `.msg` are both gitignored, deliberately. Real messages carry other
+people's addresses, internal Exchange server names and attachment payloads, and
+none of that belongs in a repository — including a private one.
+
+The Quick Action passes converter output to `osascript` as an **argument**, never
+spliced into the AppleScript source. Output contains filenames, filenames may
+legally contain quotes and backslashes, and interpolating those into script
+source lets them escape the string literal and be parsed as code.
+
 ## How it works
 
 ```
