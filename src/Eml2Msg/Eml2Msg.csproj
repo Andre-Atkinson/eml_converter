@@ -5,6 +5,20 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Emit the CLI binary as lowercase 'eml2msg', matching the name the README
+         and the Quick Action installer use. Without this it publishes as
+         'Eml2Msg' and only resolves on a case-insensitive (default APFS) volume;
+         on a case-sensitive one the Quick Action fails with "Converter not found". -->
+    <AssemblyName>eml2msg</AssemblyName>
+    <!-- Pin the full transitive dependency graph in packages.lock.json so a
+         restore cannot silently pull a different - or compromised - transitive
+         version. Release builds add -p:RestoreLockedMode=true to fail closed. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Declare both Mac targets so a single restore captures the runtime
+         dependency graph for each in the lock file. Without this the lock only
+         covers whichever RID it was last generated for, and a locked-mode build
+         on the other architecture fails. -->
+    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
