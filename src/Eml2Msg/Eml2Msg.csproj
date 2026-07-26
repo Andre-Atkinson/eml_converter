@@ -19,6 +19,12 @@
          covers whichever RID it was last generated for, and a locked-mode build
          on the other architecture fails. -->
     <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
+    <!-- Use the runtime patch the pinned SDK ships, not the newest one that
+         happens to be installed. Microsoft.NET.ILLink.Tasks tracks the runtime
+         version and is captured in the lock file, so letting it float (the
+         self-contained default) breaks the locked build on any machine with a
+         newer runtime patch installed - e.g. a CI runner. -->
+    <TargetLatestRuntimePatch>false</TargetLatestRuntimePatch>
   </PropertyGroup>
 
   <ItemGroup>
