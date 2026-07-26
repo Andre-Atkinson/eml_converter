@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # Third-party NuGet dependencies (MsgKit and its transitives). Dependabot
+  # bumps the version and regenerates packages.lock.json; CI's `make verify`,
+  # build, tests, and vulnerability audit gate the PR before it can merge.
+  - package-ecosystem: nuget
+    directory: /src/Eml2Msg
+    schedule:
+      interval: weekly
+    groups:
+      nuget-dependencies:
+        patterns:
+          - "*"
+
+  # Actions used by the CI workflow - keeps checkout / setup-dotnet /
+  # setup-python on current majors (also clears the Node 20 deprecation).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
