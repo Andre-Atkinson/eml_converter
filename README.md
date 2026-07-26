@@ -170,6 +170,29 @@ print the decompressed RTF and confirm the HTML round-trips out intact:
 python3 tools/inspect_msg.py somefile.msg --rtf
 ```
 
+## Testing
+
+The tests synthesise `.eml` fixtures, convert them, and verify the resulting
+`.msg` with `tools/inspect_msg.py` as an independent oracle — the container is
+parsed by hand, never by the MsgKit library that wrote it, so a bug in MsgKit
+cannot hide behind itself. They cover the fiddly paths: encapsulated-HTML RTF,
+the signed-`\uN` escaping of astral characters (emoji), byte-for-byte
+attachments, the missing-`From:` blank sender, Unicode subjects, and recipients.
+
+Fixtures are built at runtime with Python's `email` package, so no sample mail
+is ever committed. The suite runs against `bin/eml2msg` when it is built, and
+otherwise builds a framework-dependent binary on the fly. Run it in a virtual
+environment:
+
+```bash
+make build
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest
+```
+
+Point `EML2MSG_BIN` at a specific binary to test that one instead.
+
 ## Notes on handling mail
 
 `.eml` and `.msg` are both gitignored, deliberately. Real messages carry other

@@ -7,3 +7,8 @@ src/**/obj/
 # Exchange server names and attachment payloads.
 *.eml
 *.msg
+
+# Python test tooling
+__pycache__/
+.pytest_cache/
+.venv/
