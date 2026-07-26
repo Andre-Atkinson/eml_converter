@@ -26,7 +26,10 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # Install the exact SDK from global.json. Microsoft.NET.ILLink.Tasks
+          # ships with the SDK, and the single-file publish pins it in the lock
+          # file, so the runner's SDK must match or locked-mode restore fails.
+          global-json-file: global.json
           # Cache ~/.nuget keyed on the committed lock file.
           cache: true
           cache-dependency-path: src/Eml2Msg/packages.lock.json

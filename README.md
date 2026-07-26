@@ -135,8 +135,10 @@ Notes:
 - The RID is chosen from your CPU; override it with `make install RID=osx-x64`
   if you need to cross-target.
 - Builds run with `RestoreLockedMode`, so a dependency that doesn't match the
-  committed lock file fails the build instead of resolving silently. After
-  intentionally bumping a package, run `make lock` and commit the diff.
+  committed lock file fails the build instead of resolving silently. The .NET
+  SDK is pinned in `global.json` (its ILLink tooling is captured in the lock);
+  after intentionally bumping a package or the SDK, run `make lock` and commit
+  the diff.
 - The build is **self-contained** (~79 MB) on purpose. Automator runs Quick
   Actions with a near-empty environment and will not find a Homebrew .NET, so a
   framework-dependent binary fails there with "You must install .NET".
