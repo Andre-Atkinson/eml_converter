@@ -25,6 +25,8 @@ System Settings → General → Login Items & Extensions → Services → Files 
 
 ### Command line
 
+Build once with `make build`, then:
+
 ```bash
 ./bin/eml2msg mail.eml
 ```
@@ -100,41 +102,53 @@ Getting that wrong garbles them in Outlook.
 
 ## Setting up on a Mac
 
-The only prerequisite is the .NET SDK. Everything else (MsgKit, MimeKit,
-OpenMcdf) is restored per-project into `~/.nuget`; nothing is installed
-system-wide.
+The only prerequisite is the .NET SDK. Everything else (MsgKit and its
+dependencies) is restored per-project into `~/.nuget`, pinned in
+`src/Eml2Msg/packages.lock.json`; nothing is installed system-wide.
 
 ```bash
 brew install dotnet
 ```
 
-Then clone, build and install the Quick Action:
+Then clone and install the Quick Action. `make install` builds the binary —
+picking `osx-arm64` or `osx-x64` from your CPU automatically — and installs the
+Finder action:
 
 ```bash
 git clone https://github.com/Andre-Atkinson/eml_converter.git
 cd eml_converter
-dotnet publish src/Eml2Msg -c Release -o bin -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-python3 tools/install_quickaction.py --from "Your Name <you@example.com>"
+make install FROM="Your Name <you@example.com>"
 ```
 
-On an **Intel** Mac use `-r osx-x64` instead of `osx-arm64`.
+| Target | Does |
+| --- | --- |
+| `make build` | build the self-contained binary into `bin/` |
+| `make install FROM=…` | build, then install the Quick Action |
+| `make uninstall` | remove the Quick Action |
+| `make lock` | regenerate `packages.lock.json` after a dependency change |
+| `make clean` | remove build output |
 
 Notes:
 
+- The RID is chosen from your CPU; override it with `make install RID=osx-x64`
+  if you need to cross-target.
+- Builds run with `RestoreLockedMode`, so a dependency that doesn't match the
+  committed lock file fails the build instead of resolving silently. After
+  intentionally bumping a package, run `make lock` and commit the diff.
 - The build is **self-contained** (~79 MB) on purpose. Automator runs Quick
   Actions with a near-empty environment and will not find a Homebrew .NET, so a
   framework-dependent binary fails there with "You must install .NET".
 - `bin/` is gitignored — the binary is always built locally, never committed.
-- The Quick Action stores the binary's absolute path, so republishing in place
-  is picked up automatically. Move the repo and re-run the installer.
-- `--from` is baked into the installed Quick Action. Re-run the installer to
+- The Quick Action stores the binary's absolute path, so rebuilding in place is
+  picked up automatically. Move the repo and re-run `make install`.
+- `FROM` is baked into the installed Quick Action. Re-run `make install` to
   change it, or edit `COMMAND_STRING` in
   `~/Library/Services/Convert to MSG.workflow/Contents/document.wflow`.
 
 To remove it:
 
 ```bash
-python3 tools/install_quickaction.py --uninstall
+make uninstall
 ```
 
 ## Verifying
