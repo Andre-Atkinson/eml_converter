@@ -3,7 +3,8 @@
 #   make build              build the self-contained binary into ./bin
 #   make install FROM=...   build, then install the "Convert to MSG" Quick Action
 #   make uninstall          remove the Quick Action
-#   make lock               regenerate packages.lock.json after changing a dependency
+#   make verify             fail if the third-party lock file has drifted
+#   make lock               regenerate packages.lock.json after a dependency change
 #   make clean              remove build output
 #
 # FROM is the sender used for .eml files that have no From: header (Outlook for
@@ -22,35 +23,34 @@ endif
 PROJECT := src/Eml2Msg
 FROM ?=
 
-# The single publish invocation that 'build' and 'lock' share, so the lock file
-# is always regenerated under the exact inputs the build consumes. A
-# self-contained single-file publish pulls in the target RID graph and
-# Microsoft.NET.ILLink.Tasks; a plain 'dotnet restore' captures neither and
-# produces a lock that then fails locked-mode restore.
-PUBLISH := dotnet publish $(PROJECT) -c Release -o bin -r $(RID) \
-	--self-contained true -p:PublishSingleFile=true \
-	-p:IncludeNativeLibrariesForSelfExtract=true
-
 .DEFAULT_GOAL := help
 
-.PHONY: help build install uninstall lock clean
+.PHONY: help build install uninstall verify lock clean
 
 help:
 	@echo "eml2msg targets:"
 	@echo "  make build              build the self-contained binary into ./bin ($(RID))"
 	@echo "  make install FROM=...   build, then install the Finder Quick Action"
 	@echo "  make uninstall          remove the Quick Action"
+	@echo "  make verify             fail if the third-party lock file has drifted"
 	@echo "  make lock               regenerate packages.lock.json after a dependency change"
 	@echo "  make clean              remove build output"
 	@echo ""
 	@echo "FROM sets the sender for .eml files with no From: header, e.g."
 	@echo '  make install FROM="Andre Atkinson <andre@example.com>"'
 
-# RestoreLockedMode=true makes the build fail rather than silently update the
-# lock file, so a distributed binary always matches the pinned dependency graph.
-# Run 'make lock' after intentionally changing a package version.
+# The self-contained publish restores runtime packs and ILLink that are not in
+# the third-party lock, so its restore would rewrite packages.lock.json (and
+# NuGet forbids disabling the lock while the file exists). Snapshot the committed
+# lock and move it back afterward - even on failure or Ctrl-C - so the build
+# leaves it untouched. Supply-chain pinning is enforced separately by 'make
+# verify', and building this way lets the binary ship the latest runtime patch.
 build:
-	$(PUBLISH) -p:RestoreLockedMode=true
+	cp $(PROJECT)/packages.lock.json $(PROJECT)/packages.lock.json.bak
+	trap 'mv -f $(PROJECT)/packages.lock.json.bak $(PROJECT)/packages.lock.json' EXIT INT TERM; \
+	dotnet publish $(PROJECT) -c Release -o bin -r $(RID) \
+		--self-contained true -p:PublishSingleFile=true \
+		-p:IncludeNativeLibrariesForSelfExtract=true
 
 install: build
 	python3 tools/install_quickaction.py --from "$(FROM)"
@@ -58,10 +58,17 @@ install: build
 uninstall:
 	python3 tools/install_quickaction.py --uninstall
 
-# Regenerate the lock through the same publish path the build uses, so both RID
-# graphs and the single-file publish packages are captured. Review the diff.
+# Fail closed if the resolved third-party graph no longer matches the committed
+# lock - a changed version, or a package whose bytes differ from what was locked.
+# This is the supply-chain gate; CI runs it too.
+verify:
+	dotnet restore $(PROJECT) --locked-mode
+
+# Regenerate the lock after intentionally changing a dependency, then review and
+# commit the diff. Framework-dependent, so it captures only the third-party
+# packages (with portable nuget.org content hashes), never SDK-shipped ones.
 lock:
-	$(PUBLISH) -p:RestoreLockedMode=false -p:RestoreForceEvaluate=true
+	dotnet restore $(PROJECT) --force-evaluate
 	@echo "packages.lock.json regenerated - review and commit the diff."
 
 clean:

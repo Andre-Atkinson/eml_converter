@@ -22,12 +22,10 @@ def _resolve_binary():
         return prebuilt
 
     # No prebuilt binary (e.g. a fresh CI checkout): build a framework-dependent
-    # one. RestorePackagesWithLockFile=false keeps this restore from rewriting
-    # the committed lock file, which is generated for the self-contained publish
-    # and would otherwise be pruned to this smaller graph.
+    # one. This restore matches the framework-dependent lock exactly, so it
+    # neither fails locked validation nor rewrites the committed lock.
     subprocess.run(
-        ["dotnet", "build", str(REPO / "src" / "Eml2Msg"), "-c", "Release",
-         "-p:RestorePackagesWithLockFile=false"],
+        ["dotnet", "build", str(REPO / "src" / "Eml2Msg"), "-c", "Release"],
         check=True, cwd=str(REPO),
     )
     built = REPO / "src" / "Eml2Msg" / "bin" / "Release" / "net10.0" / "eml2msg"

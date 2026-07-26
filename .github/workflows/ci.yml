@@ -26,10 +26,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          # Install the exact SDK from global.json. Microsoft.NET.ILLink.Tasks
-          # ships with the SDK, and the single-file publish pins it in the lock
-          # file, so the runner's SDK must match or locked-mode restore fails.
-          global-json-file: global.json
+          dotnet-version: '10.0.x'
           # Cache ~/.nuget keyed on the committed lock file.
           cache: true
           cache-dependency-path: src/Eml2Msg/packages.lock.json
@@ -41,9 +38,12 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.txt
 
-      # Exercises the real shipping build, including RestoreLockedMode: if the
-      # committed lock does not match the dependency graph, this fails.
-      - name: Build (locked-mode, self-contained)
+      # Supply-chain gate: fail closed if the third-party dependency graph no
+      # longer matches the committed lock (portable nuget.org content hashes).
+      - name: Verify locked dependencies
+        run: make verify
+
+      - name: Build (self-contained)
         run: make build
 
       - name: Install test dependencies

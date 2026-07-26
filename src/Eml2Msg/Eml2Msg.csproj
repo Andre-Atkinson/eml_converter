@@ -10,21 +10,15 @@
          'Eml2Msg' and only resolves on a case-insensitive (default APFS) volume;
          on a case-sensitive one the Quick Action fails with "Converter not found". -->
     <AssemblyName>eml2msg</AssemblyName>
-    <!-- Pin the full transitive dependency graph in packages.lock.json so a
-         restore cannot silently pull a different - or compromised - transitive
-         version. Release builds add -p:RestoreLockedMode=true to fail closed. -->
+    <!-- Pin the third-party dependency graph (MsgKit and its transitives) in
+         packages.lock.json so a restore cannot silently pull a different - or
+         tampered - version. The lock is framework-dependent on purpose: it does
+         not capture SDK-shipped packages (ILLink, runtime packs), whose versions
+         float with the installed runtime and whose content hashes are not
+         portable between machines. Enforce it with 'make verify'; the
+         self-contained publish restores lock-free so it can ship the latest
+         runtime patch. -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <!-- Declare both Mac targets so a single restore captures the runtime
-         dependency graph for each in the lock file. Without this the lock only
-         covers whichever RID it was last generated for, and a locked-mode build
-         on the other architecture fails. -->
-    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
-    <!-- Use the runtime patch the pinned SDK ships, not the newest one that
-         happens to be installed. Microsoft.NET.ILLink.Tasks tracks the runtime
-         version and is captured in the lock file, so letting it float (the
-         self-contained default) breaks the locked build on any machine with a
-         newer runtime patch installed - e.g. a CI runner. -->
-    <TargetLatestRuntimePatch>false</TargetLatestRuntimePatch>
   </PropertyGroup>
 
   <ItemGroup>
