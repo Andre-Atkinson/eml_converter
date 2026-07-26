@@ -21,10 +21,10 @@ jobs:
     # macos-latest is Apple Silicon (arm64); the Makefile picks osx-arm64 to match.
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget keyed on the committed lock file.
@@ -32,7 +32,7 @@ jobs:
           cache-dependency-path: src/Eml2Msg/packages.lock.json
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
