@@ -1,5 +1,7 @@
 # eml2msg
 
+[![CI](https://github.com/Andre-Atkinson/eml_converter/actions/workflows/ci.yml/badge.svg)](https://github.com/Andre-Atkinson/eml_converter/actions/workflows/ci.yml)
+
 Converts Outlook-for-Mac `.eml` files into Windows Outlook `.msg` files, so
 colleagues on Windows can open them natively.
 

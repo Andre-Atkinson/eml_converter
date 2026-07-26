@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: the job only reads the repo.
+permissions:
+  contents: read
+
+# Cancel an in-flight run when new commits land on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & test (macOS)
+    # macos-latest is Apple Silicon (arm64); the Makefile picks osx-arm64 to match.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          # Cache ~/.nuget keyed on the committed lock file.
+          cache: true
+          cache-dependency-path: src/Eml2Msg/packages.lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      # Exercises the real shipping build, including RestoreLockedMode: if the
+      # committed lock does not match the dependency graph, this fails.
+      - name: Build (locked-mode, self-contained)
+        run: make build
+
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      # The suite finds the bin/eml2msg just built and verifies its output with
+      # the inspect_msg oracle.
+      - name: Run tests
+        run: python -m pytest
+
+      # dotnet list exits 0 even when it finds vulnerabilities, so grep the
+      # report and fail the job on a hit. Runs last because its restore may
+      # rewrite the lock file in the runner (harmless here, but it must not
+      # happen before the locked-mode build above).
+      - name: Audit dependencies for known vulnerabilities
+        run: |
+          dotnet list src/Eml2Msg/Eml2Msg.csproj package --vulnerable --include-transitive | tee audit.txt
+          if grep -q 'has the following vulnerable' audit.txt; then
+            echo "::error::Vulnerable NuGet packages detected"
+            exit 1
+          fi
+          echo "No known-vulnerable packages."
