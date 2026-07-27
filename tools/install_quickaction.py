@@ -10,6 +10,7 @@ Usage:
 import argparse
 import pathlib
 import plistlib
+import shlex
 import shutil
 import subprocess
 import sys
@@ -23,9 +24,10 @@ BUNDLE = SERVICES / "Convert to MSG.workflow"
 SCRIPT_TEMPLATE = r'''# Convert selected .eml files to .msg, alongside the originals.
 # FROM is used only when an .eml has no From: header - Outlook for Mac omits it
 # on messages you sent yourself, which would otherwise land in Windows Outlook
-# with a blank sender.
-BIN="{binary}"
-FROM="{sender}"
+# with a blank sender. Both values are shell-quoted with shlex.quote() when this
+# template is rendered, so they carry their own quoting - do not add more here.
+BIN={binary}
+FROM={sender}
 
 # Message text is passed to osascript as an *argument*, never interpolated into
 # the script source. Converter output contains filenames, and a filename may
@@ -195,7 +197,11 @@ def main():
               "-p:IncludeNativeLibrariesForSelfExtract=true", file=sys.stderr)
         return 1
 
-    script = SCRIPT_TEMPLATE.format(binary=binary, sender=args.sender)
+    # shlex.quote() so a binary path or sender containing quotes, spaces or shell
+    # metacharacters cannot break out of the string literal (or inject commands)
+    # in the generated Quick Action script.
+    script = SCRIPT_TEMPLATE.format(
+        binary=shlex.quote(str(binary)), sender=shlex.quote(args.sender))
 
     if BUNDLE.exists():
         shutil.rmtree(BUNDLE)
