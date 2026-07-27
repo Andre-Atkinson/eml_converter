@@ -172,6 +172,10 @@ def main():
         "--from", dest="sender", default="",
         help='sender for .eml files with no From: header, e.g. "You <you@example.com>"')
     parser.add_argument("--uninstall", action="store_true", help="remove the Quick Action")
+    parser.add_argument(
+        "--binary", default=str(BINARY),
+        help="path to the eml2msg binary the action calls "
+             "(default: bin/eml2msg in this repo; Homebrew installs point at its own)")
     args = parser.parse_args()
 
     if args.uninstall:
@@ -183,14 +187,15 @@ def main():
         subprocess.run(["/System/Library/CoreServices/pbs", "-flush"], check=False)
         return 0
 
-    if not BINARY.exists():
-        print(f"error: {BINARY} not found - build it first:", file=sys.stderr)
+    binary = pathlib.Path(args.binary)
+    if not binary.exists():
+        print(f"error: {binary} not found - build it first:", file=sys.stderr)
         print("  dotnet publish src/Eml2Msg -c Release -o bin -r osx-arm64 "
               "--self-contained true -p:PublishSingleFile=true "
               "-p:IncludeNativeLibrariesForSelfExtract=true", file=sys.stderr)
         return 1
 
-    script = SCRIPT_TEMPLATE.format(binary=BINARY, sender=args.sender)
+    script = SCRIPT_TEMPLATE.format(binary=binary, sender=args.sender)
 
     if BUNDLE.exists():
         shutil.rmtree(BUNDLE)
@@ -206,7 +211,7 @@ def main():
     subprocess.run(["/System/Library/CoreServices/pbs", "-flush"], check=False)
 
     print(f"installed: {BUNDLE}")
-    print(f"binary   : {BINARY}")
+    print(f"binary   : {binary}")
     print(f"sender   : {args.sender or '(none - will warn on .eml with no From:)'}")
     print()
     print("Right-click an .eml in Finder -> Quick Actions -> Convert to MSG")
