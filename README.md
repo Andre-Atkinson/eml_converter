@@ -104,9 +104,26 @@ Getting that wrong garbles them in Outlook.
 
 ## Setting up on a Mac
 
-The only prerequisite is the .NET SDK. Everything else (MsgKit and its
-dependencies) is restored per-project into `~/.nuget`, pinned in
-`src/Eml2Msg/packages.lock.json`; nothing is installed system-wide.
+### Homebrew
+
+```bash
+brew install andre-atkinson/tap/eml2msg
+```
+
+This builds the self-contained binary from source (the .NET SDK is pulled in
+only as a build dependency) and puts `eml2msg` on your `PATH`. To add the Finder
+**Convert to MSG** Quick Action afterwards:
+
+```bash
+python3 "$(brew --prefix eml2msg)/libexec/install_quickaction.py" \
+  --binary "$(brew --prefix eml2msg)/bin/eml2msg" --from "Your Name <you@example.com>"
+```
+
+### From source
+
+The only prerequisite is the .NET SDK; everything else (MsgKit and its
+dependencies) restores per-project into `~/.nuget`, pinned in
+`src/Eml2Msg/packages.lock.json`, and nothing is installed system-wide.
 
 ```bash
 brew install dotnet
