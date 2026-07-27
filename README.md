@@ -2,118 +2,49 @@
 
 [![CI](https://github.com/Andre-Atkinson/eml_converter/actions/workflows/ci.yml/badge.svg)](https://github.com/Andre-Atkinson/eml_converter/actions/workflows/ci.yml)
 
-Converts Outlook-for-Mac `.eml` files into Windows Outlook `.msg` files, so
-colleagues on Windows can open them natively.
+Convert Outlook-for-Mac `.eml` files into Windows Outlook `.msg` files, so
+colleagues on Windows can open them natively — from the command line or a Finder
+right-click.
 
-## Why this exists
+> **Disclaimer — please read.** This project was written with substantial help
+> from AI (Anthropic's Claude). It has an automated test suite and verifies its
+> output against an independent parser, but it is a personal utility provided
+> **as is, without warranty. Use at your own risk** — keep your original `.eml`
+> files and spot-check important conversions.
 
-Outlook for Mac saves messages as `.eml` (plain MIME text). Windows Outlook
-expects `.msg`, which is a completely different thing: a binary OLE2 compound
-file holding MAPI properties. Converting means re-encoding every header, body
-and attachment as MAPI properties inside that container.
+Outlook for Mac saves messages as `.eml` (plain MIME text); Windows Outlook
+expects `.msg`, a binary OLE2 compound file full of MAPI properties. `eml2msg`
+re-encodes every header, body, and attachment into that format.
 
-> **Worth knowing:** Outlook for Mac cannot *open* `.msg` files. This tool is for
-> producing files other people can open on Windows — not for reading them here.
+> **Note:** Outlook for Mac cannot *open* `.msg` files. This tool produces files
+> for other people to open on Windows; it is not a `.msg` reader.
 
-## Usage
+## What it converts
 
-### Finder (installed)
-
-Select one or more `.eml` files in Finder, right-click → **Quick Actions → Convert to MSG**.
-The `.msg` lands next to the original and a notification reports the result.
-
-If it isn't in the menu, enable it under
-System Settings → General → Login Items & Extensions → Services → Files & Folders.
-
-### Command line
-
-Build once with `make build`, then:
-
-```bash
-./bin/eml2msg mail.eml
-```
-
-| Option | Meaning |
-| --- | --- |
-| `-o, --outdir DIR` | write `.msg` files to `DIR` (default: beside the `.eml`) |
-| `-f, --from ADDR` | sender to use when the `.eml` has no `From:` header |
-| `--no-rtf` | skip the RTF body (RTF is added by default) |
-| `--overwrite` | replace an existing `.msg` instead of appending `" (1)"` |
-| `-h, --help` | show help |
-
-Folders are accepted and expanded to their `.eml` children:
-
-```bash
-./bin/eml2msg -o ~/Desktop/converted ~/Desktop/exported-mail
-```
-
-`$EML2MSG_FROM` works as a default for `--from`.
-
-## The missing-sender gotcha
-
-Outlook for Mac omits the `From:` header on messages **you** sent. Converted
-straight across, those arrive in Windows Outlook with a **blank sender**
-(`PR_SENDER_NAME` and `PR_SENDER_EMAIL_ADDRESS` are written as zero-length).
-
-`eml2msg` detects this and either warns, or fills in `--from` if you supply one.
-The Quick Action sets it automatically — edit `FROM` at the top of the script if
-your address changes:
-
-```
-~/Library/Services/Convert to MSG.workflow/Contents/document.wflow
-```
-
-## What survives conversion
-
-Verified against real output by parsing the generated container independently
-(see *Verifying* below):
-
-- Subject, plain-text body, HTML body
-- **RTF body** (`PR_RTF_COMPRESSED`) — see below
+- Subject, plain-text and HTML bodies
+- A synthesised **RTF body** (`PR_RTF_COMPRESSED`) matching how Outlook stores
+  HTML mail — see [RTF bodies](#rtf-bodies)
 - To / Cc / Bcc recipients, as MAPI recipient storages
-- Attachments, byte-for-byte, with long filenames
-- `Message-ID`, and the full original headers in `PR_TRANSPORT_MESSAGE_HEADERS`
-- Non-ASCII text — everything is written as `PT_UNICODE`, so no mojibake
+- Attachments, byte-for-byte, including long Unicode filenames
+- `Message-ID` and the full original headers (`PR_TRANSPORT_MESSAGE_HEADERS`)
+- Non-ASCII text throughout, written as `PT_UNICODE` (no mojibake)
+- Whole folders in one go
 
-Not currently handled: S/MIME signed and encrypted mail.
+Not handled: S/MIME signed or encrypted mail.
 
-## RTF
+## Installation
 
-Windows Outlook composes mail with an RTF body in `PR_RTF_COMPRESSED` alongside
-the HTML, and some document-management systems require it. Outlook-for-Mac `.eml`
-files never contain RTF, so `eml2msg` synthesises one.
-
-It uses **encapsulated HTML** (`\fromhtml1`, per [MS-OXRTFEX]) — the same form
-Outlook itself uses for HTML mail. The original HTML is carried verbatim inside
-`\*\htmltag` destinations, so nothing is re-rendered, reflowed or lost: a reader
-recovers the exact HTML back out. MsgKit then compresses it with LZFu.
-
-Behaviour:
-
-- On by default; `--no-rtf` disables it.
-- A message that already contains a genuine `text/rtf` part keeps it untouched.
-- **Plain-text-only mail gets no RTF** — `\fromhtml1` would be a lie, and Outlook
-  renders plain bodies correctly without it.
-
-Escaping follows the RTF rules: `{`, `}` and `\` are backslash-escaped, tabs
-become `\tab`, newlines become `\par`, Latin-1 characters become `\'XX`, and
-anything higher becomes `\uN?`. Note `\uN` is a **signed 16-bit** value, so
-characters above U+7FFF — which includes every surrogate, and therefore all
-emoji and other astral characters — are written as their negative equivalent.
-Getting that wrong garbles them in Outlook.
-
-## Setting up on a Mac
-
-### Homebrew
+### Homebrew (recommended)
 
 ```bash
 brew install andre-atkinson/tap/eml2msg
 ```
 
 This builds the self-contained binary from source (the .NET SDK is pulled in
-only as a build dependency) and puts `eml2msg` on your `PATH`. To add the Finder
-**Convert to MSG** Quick Action afterwards, one command (Homebrew can't create
-the per-user action itself):
+only as a build dependency) and puts `eml2msg` on your `PATH`.
+
+To add the optional Finder **Convert to MSG** Quick Action — Homebrew can't
+create the per-user action itself, so this is one extra command:
 
 ```bash
 eml2msg-quickaction --from "Your Name <you@example.com>"
@@ -121,17 +52,8 @@ eml2msg-quickaction --from "Your Name <you@example.com>"
 
 ### From source
 
-The only prerequisite is the .NET SDK; everything else (MsgKit and its
-dependencies) restores per-project into `~/.nuget`, pinned in
-`src/Eml2Msg/packages.lock.json`, and nothing is installed system-wide.
-
-```bash
-brew install dotnet
-```
-
-Then clone and install the Quick Action. `make install` builds the binary —
-picking `osx-arm64` or `osx-x64` from your CPU automatically — and installs the
-Finder action:
+Requires the .NET SDK (`brew install dotnet`); everything else restores locally
+into `~/.nuget`, and nothing is installed system-wide.
 
 ```bash
 git clone https://github.com/Andre-Atkinson/eml_converter.git
@@ -139,72 +61,102 @@ cd eml_converter
 make install FROM="Your Name <you@example.com>"
 ```
 
-| Target | Does |
+`make install` builds the binary into `bin/` (choosing `osx-arm64`/`osx-x64`
+from your CPU) and installs the Quick Action. Other `make` targets are listed
+under [Development](#development).
+
+## Usage
+
+### Finder Quick Action
+
+Select one or more `.eml` files, right-click → **Quick Actions → Convert to
+MSG**. Each `.msg` is written next to its original and a notification reports the
+result.
+
+If it doesn't appear in the menu, enable it under System Settings → General →
+Login Items & Extensions → Services → Files & Folders.
+
+### Command line
+
+```bash
+eml2msg mail.eml                          # writes mail.msg alongside the original
+eml2msg -o ~/Desktop/out ~/Desktop/mail   # convert every .eml in a folder
+```
+
+(A source build produces the binary at `./bin/eml2msg`.)
+
+| Option | Meaning |
+| --- | --- |
+| `-o, --outdir DIR` | write `.msg` files to `DIR` (default: beside the `.eml`) |
+| `-f, --from ADDR` | sender to use when the `.eml` has no `From:` header |
+| `--no-rtf` | skip the synthesised RTF body |
+| `--overwrite` | replace an existing `.msg` instead of appending `" (1)"` |
+| `-h, --help` | show help |
+
+Folders are expanded to their `.eml` children. `$EML2MSG_FROM` provides a default
+for `--from`.
+
+#### Messages you sent yourself
+
+Outlook for Mac omits the `From:` header on messages **you** sent, which would
+otherwise arrive in Windows Outlook with a blank sender. `eml2msg` warns when it
+sees this and fills the sender in from `--from` if you provide one; the Quick
+Action passes it automatically. Re-run the installer to change the address.
+
+## How it works
+
+```
+.eml ──[MimeKit parse]──> MimeMessage ──[MsgKit: MAPI mapping]──> .msg (OLE2/CFBF)
+```
+
+[MimeKit](https://www.mimekit.net/) parses the MIME and
+[MsgKit](https://github.com/Sicos1977/MsgKit) writes the MAPI properties and
+compound file. (.NET is used because Python has no usable `.msg` *writer* —
+`extract-msg`, `olefile` and friends are all read-only.)
+
+### RTF bodies
+
+Windows Outlook stores an RTF body in `PR_RTF_COMPRESSED` alongside the HTML, and
+some document-management systems require it — but Outlook-for-Mac `.eml` never
+contains one. `eml2msg` synthesises it as **encapsulated HTML** (`\fromhtml1`,
+per [MS-OXRTFEX]), the same form Outlook uses: the original HTML is carried
+verbatim inside `\*\htmltag` destinations, so nothing is re-rendered or lost,
+then compressed with LZFu.
+
+- On by default; `--no-rtf` disables it.
+- A message that already carries a real `text/rtf` part is left untouched.
+- Plain-text-only mail gets no RTF — Outlook renders it correctly without one.
+
+The subtle part is astral characters (emoji and the like): RTF's `\uN` takes a
+**signed** 16-bit value, so anything above U+7FFF is written as its negative
+equivalent. Getting that wrong garbles emoji in Outlook, so it's covered by the
+tests.
+
+## Development
+
+Prerequisite: the .NET SDK. Third-party dependencies restore into `~/.nuget`,
+pinned in `src/Eml2Msg/packages.lock.json`.
+
+| `make` target | Does |
 | --- | --- |
 | `make build` | build the self-contained binary into `bin/` |
 | `make install FROM=…` | build, then install the Quick Action |
 | `make uninstall` | remove the Quick Action |
-| `make lock` | regenerate `packages.lock.json` after a dependency change |
+| `make verify` | restore in locked mode; fails if the dependency graph drifts |
+| `make lock` | regenerate `packages.lock.json` after changing a dependency |
 | `make clean` | remove build output |
 
-Notes:
+The build is self-contained (~80 MB) on purpose: Automator runs Quick Actions in
+a near-empty environment that can't find a Homebrew .NET.
 
-- The RID is chosen from your CPU; override it with `make install RID=osx-x64`
-  if you need to cross-target.
-- The third-party dependencies (MsgKit and its transitives) are pinned in
-  `src/Eml2Msg/packages.lock.json`. `make verify` fails closed if that graph
-  drifts or a package's bytes change, and CI runs it on every push; after
-  intentionally bumping a dependency, run `make lock` and commit the diff. The
-  .NET SDK and runtime are deliberately not pinned, so the binary ships the
-  latest runtime patch.
-- The build is **self-contained** (~79 MB) on purpose. Automator runs Quick
-  Actions with a near-empty environment and will not find a Homebrew .NET, so a
-  framework-dependent binary fails there with "You must install .NET".
-- `bin/` is gitignored — the binary is always built locally, never committed.
-- The Quick Action stores the binary's absolute path, so rebuilding in place is
-  picked up automatically. Move the repo and re-run `make install`.
-- `FROM` is baked into the installed Quick Action. Re-run `make install` to
-  change it, or edit `COMMAND_STRING` in
-  `~/Library/Services/Convert to MSG.workflow/Contents/document.wflow`.
+### Tests
 
-To remove it:
-
-```bash
-make uninstall
-```
-
-## Verifying
-
-Conversion succeeding is not proof the file is valid. `tools/inspect_msg.py`
-parses the OLE2 container by hand — no MsgKit, no `olefile` — and lists the MAPI
-properties actually present, so the check doesn't rely on the library that wrote
-the file:
-
-```bash
-python3 tools/inspect_msg.py somefile.msg
-```
-
-It also **decompresses `PR_RTF_COMPRESSED`** (LZFu, per [MS-OXRTFCP]) and checks
-the result is well-formed, rather than just counting its bytes. Add `--rtf` to
-print the decompressed RTF and confirm the HTML round-trips out intact:
-
-```bash
-python3 tools/inspect_msg.py somefile.msg --rtf
-```
-
-## Testing
-
-The tests synthesise `.eml` fixtures, convert them, and verify the resulting
-`.msg` with `tools/inspect_msg.py` as an independent oracle — the container is
-parsed by hand, never by the MsgKit library that wrote it, so a bug in MsgKit
-cannot hide behind itself. They cover the fiddly paths: encapsulated-HTML RTF,
-the signed-`\uN` escaping of astral characters (emoji), byte-for-byte
-attachments, the missing-`From:` blank sender, Unicode subjects, and recipients.
-
-Fixtures are built at runtime with Python's `email` package, so no sample mail
-is ever committed. The suite runs against `bin/eml2msg` when it is built, and
-otherwise builds a framework-dependent binary on the fly. Run it in a virtual
-environment:
+The suite synthesises `.eml` fixtures at runtime (no sample mail is committed),
+converts them, and verifies the resulting `.msg` with `tools/inspect_msg.py` — an
+independent parser that walks the OLE2 container by hand, so a bug in MsgKit
+can't vouch for itself. It covers the fiddly paths: encapsulated-HTML RTF,
+signed-`\uN` emoji escaping, byte-for-byte attachments, the missing-sender case,
+Unicode subjects, and recipients.
 
 ```bash
 make build
@@ -213,31 +165,28 @@ python3 -m venv .venv
 .venv/bin/python -m pytest
 ```
 
-Point `EML2MSG_BIN` at a specific binary to test that one instead.
+Set `EML2MSG_BIN` to test a specific binary. CI runs the suite on every push
+(macOS), together with `make verify` and a dependency vulnerability audit.
 
-## Notes on handling mail
+### Inspecting output
 
-`.eml` and `.msg` are both gitignored, deliberately. Real messages carry other
-people's addresses, internal Exchange server names and attachment payloads, and
-none of that belongs in a repository — including a private one.
-
-The Quick Action passes converter output to `osascript` as an **argument**, never
-spliced into the AppleScript source. Output contains filenames, filenames may
-legally contain quotes and backslashes, and interpolating those into script
-source lets them escape the string literal and be parsed as code.
-
-## How it works
-
-```
-.eml ──[MimeKit parse]──> MimeMessage ──[MsgKit: MAPI mapping]──> .msg (OLE2/CFBF)
+```bash
+python3 tools/inspect_msg.py somefile.msg          # list the MAPI properties present
+python3 tools/inspect_msg.py somefile.msg --rtf    # also decompress and print the RTF
 ```
 
-[MsgKit](https://github.com/Sicos1977/MsgKit) (MIT) does the MAPI and compound-file
-work; MimeKit parses the MIME. Note that Python has no usable `.msg` *writer* —
-`extract-msg`, `olefile` and friends are all read-only — which is why this is .NET.
+## Security
+
+`eml2msg` runs entirely locally — no network, no credentials — and parses
+untrusted `.eml` input with the well-tested MimeKit library. Dependencies are
+pinned and hash-verified (`make verify`) and audited for known vulnerabilities in
+CI. To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+`.eml` and `.msg` files are gitignored: real messages carry other people's
+addresses and attachment payloads that don't belong in a repository.
 
 ## License
 
-`eml2msg` is released under the [MIT License](LICENSE). The self-contained binary
-bundles third-party components under their own licenses (MIT and MPL-2.0); see
+Released under the [MIT License](LICENSE). The self-contained binary bundles
+third-party components under their own licenses (MIT and MPL-2.0) — see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
