@@ -22,3 +22,15 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # Test-only Python dependencies (requirements-dev.txt, e.g. pytest). Not
+  # shipped in the binary; kept current so CI runs the tests against a
+  # supported pytest version.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      pip-dependencies:
+        patterns:
+          - "*"
