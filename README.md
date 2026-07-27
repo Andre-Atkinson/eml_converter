@@ -235,3 +235,9 @@ source lets them escape the string literal and be parsed as code.
 [MsgKit](https://github.com/Sicos1977/MsgKit) (MIT) does the MAPI and compound-file
 work; MimeKit parses the MIME. Note that Python has no usable `.msg` *writer* —
 `extract-msg`, `olefile` and friends are all read-only — which is why this is .NET.
+
+## License
+
+`eml2msg` is released under the [MIT License](LICENSE). The self-contained binary
+bundles third-party components under their own licenses (MIT and MPL-2.0); see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
