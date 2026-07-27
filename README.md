@@ -112,11 +112,11 @@ brew install andre-atkinson/tap/eml2msg
 
 This builds the self-contained binary from source (the .NET SDK is pulled in
 only as a build dependency) and puts `eml2msg` on your `PATH`. To add the Finder
-**Convert to MSG** Quick Action afterwards:
+**Convert to MSG** Quick Action afterwards, one command (Homebrew can't create
+the per-user action itself):
 
 ```bash
-python3 "$(brew --prefix eml2msg)/libexec/install_quickaction.py" \
-  --binary "$(brew --prefix eml2msg)/bin/eml2msg" --from "Your Name <you@example.com>"
+eml2msg-quickaction --from "Your Name <you@example.com>"
 ```
 
 ### From source
