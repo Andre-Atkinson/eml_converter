@@ -4,32 +4,32 @@
     "net10.0": {
       "MsgKit": {
         "type": "Direct",
-        "requested": "[3.0.5, )",
-        "resolved": "3.0.5",
-        "contentHash": "faKXVzpYXooE4hv9J1CCKq2xx8pjbq9FWxbPzj62YCvOXY/a3vHDobwVglEe5uZ7Fco7ZgxJF218tareP80CVA==",
+        "requested": "[3.0.6, )",
+        "resolved": "3.0.6",
+        "contentHash": "TelWI1C5AHYFNR78nrmvoA7WYxz8eAK4+L4G9rBhvG9UN3wYuxE7rLRH3jxgBrXYsC7l6kpkLbjZ3PLkwUNHpg==",
         "dependencies": {
-          "MimeKit": "4.17.0",
-          "OpenMcdf": "3.1.4"
+          "MimeKit": "4.18.1",
+          "OpenMcdf": "3.3.0"
         }
       },
       "BouncyCastle.Cryptography": {
         "type": "Transitive",
-        "resolved": "2.6.2",
-        "contentHash": "7oWOcvnntmMKNzDLsdxAYqApt+AjpRpP2CShjMfIa3umZ42UQMvH0tl1qAliYPNYO6vTdcGMqnRrCPmsfzTI1w=="
+        "resolved": "2.7.0",
+        "contentHash": "U+12df8UEWHgBi04YVf/Lgi2dy3SItlIYvHjjEVa/BngCQIzDCDRBk50DDByCfDvSbe5pRNFr3b7UrVK2kMcLw=="
       },
       "MimeKit": {
         "type": "Transitive",
-        "resolved": "4.17.0",
-        "contentHash": "h/KXsCreJf8RpR/PSAtlbvYtZFndp9N8Wn1Bs248AL7ITyhn+AiIY5bLTvt60tbN2mu6g8KadtBNWygTji2lqg==",
+        "resolved": "4.18.1",
+        "contentHash": "D8AfFVMFVJldWmhQWCziC9nWUN/zayFFBAKpyjVyCeh0tqBiI9jtUVuMrKgWw1EGnCp09msDZldbRvp2jfUehQ==",
         "dependencies": {
-          "BouncyCastle.Cryptography": "2.6.2",
+          "BouncyCastle.Cryptography": "2.7.0",
           "System.Security.Cryptography.Pkcs": "10.0.0"
         }
       },
       "OpenMcdf": {
         "type": "Transitive",
-        "resolved": "3.1.4",
-        "contentHash": "ncchtCh9YKqutHTlUCrr1llXA65ijGOCjXBM0mL1+WaGouApWDEACWbBHGzuYcAvB+rgW6IgO4AKgmZ2v1moNA=="
+        "resolved": "3.3.0",
+        "contentHash": "a7lcs+yTDzPRRS82KMmU/eVCMKbJrDStD1Yt+6RRZIsDxU006IdxEVkmMLvxt2hB5YS3Imfcxrdwywtv29ogjw=="
       },
       "System.Security.Cryptography.Pkcs": {
         "type": "Transitive",
